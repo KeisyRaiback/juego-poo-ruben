@@ -6,9 +6,11 @@ class Game {
         this.personaje = null;
         this.monedas = [];
         this.puntuacion = 0;
+        this.pointsElement = document.getElementById("points")
         this.crearEscenario();
         this.agregarEventos();
     }
+   
     crearEscenario(){
         this.personaje = new Personaje();
         this.container.appendChild(this.personaje.element);
@@ -25,26 +27,34 @@ class Game {
     checkColisiones(){
       setInterval(() => {
         this.monedas.forEach((moneda, index) => {
-            if(this.personaje.colisinaCon(moneda)){
+            if(this.personaje.colisionaCon(moneda)){
                 this.container.removeChild(moneda.element);
-                this.moneda.splice(index,1)
+                this.monedas.splice(index,1)
+                this.puntuacion ++;
+                this.actualizarPuntuacion();
             }
         })
       },
         100)  
     }
+    actualizarPuntuacion () {
+        this.pointsElement.textContent = this.puntuacion;
+    }
 }
 class Personaje {
     constructor(){  
         this.x = 50;
-        this.y = 300;
+        this.y = 330;
         this.width = 50;
         this.height = 50;
-        this.velocidad = 10;
+        this.velocidad =  10;
         this.saltando = false;
+        this.puedeSaltarEnAire = true;
+        this.intervaloGravedad = null;
         this.element = document.createElement("div");
         this.element.classList.add("personaje");
-        this.actualizarPosicion();      
+        this.actualizarPosicion();  
+        this.cayendo = false;    
     }
     mover(evento){  
         if(evento.key === "ArrowRight"){
@@ -57,29 +67,48 @@ class Personaje {
         this.actualizarPosicion();
     }
     saltar(){
-        this.saltando = true;
-        let alturaMaxima = this.y - 100;
-        const salto = setInterval(() => {
-            if(this.y > alturaMaxima){
-                this.y -= 10;
-            } else{
-                clearInterval(salto);
-                this.caer();
+        if (!this.saltando && (this.puedeSaltarEnAire || !this.cayendo)) {
+            if (this.cayendo) {
+                this.puedeSaltarEnAire = false;  // Ya usó el salto en el aire
+                clearInterval(this.intervaloGravedad); // Interrumpe la caida
+                this.intervaloGravedad = null;
+                this.cayendo = false;
             }
-            this.actualizarPosicion();        
-        },
-            20)
+
+            this.saltando = true;
+            let alturaMaxima = this.y - 160;
+
+            this.intervaloSalto = setInterval(() => {
+                if (this.y > alturaMaxima) {
+                    this.y -= 10;
+                } else {
+                    clearInterval(this.intervaloSalto);
+                    this.intervaloSalto = null;
+                    this.saltando = false;
+                    this.caer();
+                }
+                this.actualizarPosicion();
+            }, 20);
+        }
     }
-    caer(){
-        const gravedad = setInterval(() => {
-            if(this.y < 300){
+            
+    
+    caer() {
+        this.cayendo = true;
+        this.intervaloGravedad = setInterval(() => {
+            if (this.y < 330) {
                 this.y += 10;
             } else {
-                clearInterval(gravedad);
+                clearInterval(this.intervaloGravedad);
+                this.intervaloGravedad = null;
+                this.cayendo = false;
+                this.puedeSaltarEnAire = true; // Resetea el flag al tocar el suelo
+                this.y = 330;
+                this.actualizarPosicion();
+                return;
             }
             this.actualizarPosicion();
-        },
-            20)
+        }, 20);
     }
     actualizarPosicion(){
         this.element.style.left = `${this.x}px`;
@@ -98,8 +127,8 @@ class Moneda {
     constructor() {
         this.x = Math.random() * 700 + 50;
         this.y = Math.random() * 250 + 50;
-        this.width = 30; 
-        this.height = 30;
+        this.width = 20; 
+        this.height = 20;
         this.element = document.createElement("div");
         this.element.classList.add("moneda");
         this.actualizarPosicion();
